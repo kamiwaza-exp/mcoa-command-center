@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from guardrails import get_security_guardrails
 
-# Import monitored tools instead of original
-import tools_monitored as tools
+# Import monitored tools from new structure
+import tools
 
 # Disable tracing for cleaner output
 set_tracing_disabled(True)
@@ -137,21 +137,8 @@ class MCOAService:
         # Import and configure the command agent with monitored tools
         from mcoa_agents_ui import command_agent
         
-        # Update command agent with monitored tools
-        command_agent.tools = [
-            tools.get_weather_conditions,
-            tools.get_terrain_analysis,
-            tools.check_threat_assessment,
-            tools.get_mission_status,
-            tools.check_unit_readiness,
-            tools.get_patrol_schedule,
-            tools.check_comms_status,
-            tools.check_supply_inventory,
-            tools.check_vehicle_status,
-            tools.request_resupply,
-            tools.calculate_sustainment,
-            tools.compute_operation_feasibility,
-        ]
+        # Update command agent with all monitored tools
+        command_agent.tools = tools.ALL_TOOLS
         
         # Apply guardrails
         command_agent.input_guardrails = get_security_guardrails()
