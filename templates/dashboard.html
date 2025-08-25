@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCOA Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🎖️ MCOA COMMAND CENTER</h1>
+                <div class="header-info">
+                    <span class="classification">UNCLASSIFIED // TRAINING</span>
+                    <span class="timestamp" id="current-time"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Tools Panel -->
+            <div class="tools-panel">
+                <!-- S-2 Intelligence Section -->
+                <div class="tool-section s2-section">
+                    <h3>S-2 INTELLIGENCE</h3>
+                    <div class="tools-grid" id="s2-tools">
+                        <div class="tool-item" data-tool="get_weather_conditions">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Weather</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="get_terrain_analysis">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Terrain</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="check_threat_assessment">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Threats</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- S-3 Operations Section -->
+                <div class="tool-section s3-section">
+                    <h3>S-3 OPERATIONS</h3>
+                    <div class="tools-grid" id="s3-tools">
+                        <div class="tool-item" data-tool="get_mission_status">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Mission</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="check_unit_readiness">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Readiness</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="get_patrol_schedule">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Patrols</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="check_comms_status">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Comms</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- S-4 Logistics Section -->
+                <div class="tool-section s4-section">
+                    <h3>S-4 LOGISTICS</h3>
+                    <div class="tools-grid" id="s4-tools">
+                        <div class="tool-item" data-tool="check_supply_inventory">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Supply</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="check_vehicle_status">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Vehicle</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                        <div class="tool-item" data-tool="request_resupply">
+                            <span class="tool-indicator"></span>
+                            <span class="tool-name">Resupply</span>
+                            <span class="tool-count">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column -->
+            <div class="middle-column">
+                <!-- Execution Row: side-by-side execution + timeline -->
+                <div class="execution-row">
+                    <!-- Active Tool Execution Panel -->
+                    <div class="execution-panel">
+                        <h3>ACTIVE TOOL EXECUTION</h3>
+                        <div id="execution-display">
+                            <div class="no-activity">No active tool execution</div>
+                        </div>
+                    </div>
+
+                    <!-- Tool Timeline -->
+                    <div class="timeline-panel">
+                        <h3>EXECUTION TIMELINE</h3>
+                        <div id="timeline-display">
+                            <!-- Timeline items will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Interface -->
+                <div class="chat-panel">
+                    <h3>COMMAND INTERFACE</h3>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="system-message">System ready. Enter your query below.</div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="query-input" class="query-input" 
+                               placeholder="Enter query... (e.g., 'Check supply status for 2nd Battalion')"
+                               autocomplete="off">
+                        <button id="send-btn" class="send-btn">SEND</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" data-query="How many MREs for 2nd Battalion?">📦 Check MREs</button>
+                        <button class="quick-btn" data-query="What's the weather at grid 38S MC 12345 67890?">🌤️ Weather</button>
+                        <button class="quick-btn" data-query="Check unit readiness for 3rd platoon">📊 Readiness</button>
+                        <button class="quick-btn" data-query="Assess whether 2nd Battalion can sustain a 72-hour operation in grid 38S MC 12345 67890 starting 0600Z tomorrow. Include weather impacts, terrain mobility, threat level, unit readiness, vehicle availability, comms status, MRE/fuel sufficiency, and recommend resupply if needed. Then provide a final GO/GO WITH CAVEATS/NO-GO decision.">⏱️ 72h Feasibility</button>
+                        <button class="quick-btn" data-query="Plan a resupply convoy for 2nd Battalion delivering 1200 MREs by 1200Z tomorrow from the nearest supply point. Assess route weather and terrain, threat level, comms status, vehicle availability, and create a convoy plan with recommended timing. If feasible, submit a PRIORITY resupply request.">🚚 Convoy Plan</button>
+                        <button class="quick-btn" id="test-all-btn">🔧 Test All</button>
+                        <button class="quick-btn danger" id="clear-btn">🗑️ Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Stats -->
+            <div class="stats-panel">
+                <h3>SESSION STATISTICS</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Queries</div>
+                        <div class="stat-value" id="stat-total">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">S-2 Calls</div>
+                        <div class="stat-value s2-color" id="stat-s2">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">S-3 Calls</div>
+                        <div class="stat-value s3-color" id="stat-s3">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">S-4 Calls</div>
+                        <div class="stat-value s4-color" id="stat-s4">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Avg Response</div>
+                        <div class="stat-value" id="stat-avg">0.0s</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Session Time</div>
+                        <div class="stat-value" id="stat-session">00:00</div>
+                    </div>
+                </div>
+
+                <!-- Guardrails Status -->
+                <h3>GUARDRAILS STATUS</h3>
+                <div class="guardrails-status">
+                    <div class="guardrail-item active">
+                        <span class="guardrail-indicator"></span>
+                        Classification Check
+                    </div>
+                    <div class="guardrail-item active">
+                        <span class="guardrail-indicator"></span>
+                        PII Protection
+                    </div>
+                    <div class="guardrail-item active">
+                        <span class="guardrail-indicator"></span>
+                        OPSEC Enforcement
+                    </div>
+                </div>
+
+                <!-- Tool Details -->
+                <h3>LAST TOOL EXECUTION</h3>
+                <div class="tool-details" id="tool-details">
+                    <div class="no-data">No tool executions yet</div>
+                </div>
+
+                <!-- Run History -->
+                <h3>RUN HISTORY</h3>
+                <div class="run-history" id="run-history">
+                    <div class="no-data">No runs yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+    <!-- Execution Details Modal -->
+    <div id="exec-modal" class="modal-overlay hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <span id="modal-title">Tool Execution</span>
+                <button id="modal-close" class="modal-close">×</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Filled dynamically -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
