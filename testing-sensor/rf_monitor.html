@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Sensor Monitor - Drone Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-rows: 60px 1fr 200px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .status-indicators {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-light {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+        }
+        
+        .status-light.active {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-light.alert {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+            animation: pulse 0.5s infinite;
+        }
+        
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 10px;
+        }
+        
+        /* Spectrum Display */
+        .spectrum-container {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            position: relative;
+        }
+        
+        #spectrumCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        /* Detection Panel */
+        .detection-panel {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .detection-header {
+            font-size: 18px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        
+        .detection-item {
+            background: #0d0d0d;
+            padding: 10px;
+            border-radius: 3px;
+            border-left: 3px solid #ff0000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .detection-item.active {
+            border-left-color: #ff0000;
+            background: #1a0d0d;
+        }
+        
+        .detection-item h3 {
+            color: #ff9900;
+            margin-bottom: 5px;
+        }
+        
+        .detection-details {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            margin-top: 5px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+            transition: width 0.3s ease;
+        }
+        
+        /* Timeline */
+        .timeline-container {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        #timelineCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Controls */
+        .controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            background: #0a0a0a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #0a0a0a;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Frequency labels */
+        .freq-labels {
+            position: absolute;
+            bottom: 5px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .alert-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 24px;
+            display: none;
+            animation: alertPulse 0.5s infinite;
+            z-index: 1000;
+        }
+        
+        @keyframes alertPulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 RF SPECTRUM MONITOR</h1>
+            <div class="status-indicators">
+                <div class="status-item">
+                    <span class="status-light active" id="sensorStatus"></span>
+                    <span>SENSOR</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-light" id="scanStatus"></span>
+                    <span>SCANNING</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-light" id="threatStatus"></span>
+                    <span>THREAT</span>
+                </div>
+                <div class="status-item">
+                    <span id="timeDisplay">00:00:00</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Spectrum Display -->
+            <div class="spectrum-container">
+                <canvas id="spectrumCanvas"></canvas>
+                <div class="controls">
+                    <button id="startBtn">START MONITOR</button>
+                    <button id="pauseBtn" disabled>PAUSE</button>
+                    <button id="resetBtn">RESET</button>
+                </div>
+                <div class="freq-labels">
+                    <span>433 MHz</span>
+                    <span>915 MHz</span>
+                    <span>1.5 GHz</span>
+                    <span>2.4 GHz</span>
+                    <span>5.8 GHz</span>
+                </div>
+            </div>
+            
+            <!-- Detection Panel -->
+            <div class="detection-panel">
+                <div class="detection-header">THREAT DETECTION</div>
+                <div id="detectionList"></div>
+            </div>
+        </div>
+        
+        <!-- Timeline -->
+        <div class="timeline-container">
+            <canvas id="timelineCanvas"></canvas>
+        </div>
+    </div>
+    
+    <!-- Alert Box -->
+    <div class="alert-box" id="alertBox">
+        ⚠️ DRONE DETECTED ⚠️
+    </div>
+    
+    <script>
+        // RF Monitor Application
+        class RFMonitor {
+            constructor() {
+                this.data = [];
+                this.currentIndex = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.detections = [];
+                this.spectrumHistory = [];
+                this.maxHistory = 100;
+                
+                this.initCanvas();
+                this.initControls();
+                this.loadData();
+            }
+            
+            initCanvas() {
+                // Spectrum canvas
+                this.spectrumCanvas = document.getElementById('spectrumCanvas');
+                this.spectrumCtx = this.spectrumCanvas.getContext('2d');
+                
+                // Timeline canvas
+                this.timelineCanvas = document.getElementById('timelineCanvas');
+                this.timelineCtx = this.timelineCanvas.getContext('2d');
+                
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            resizeCanvas() {
+                // Spectrum canvas
+                const specContainer = this.spectrumCanvas.parentElement;
+                this.spectrumCanvas.width = specContainer.clientWidth - 20;
+                this.spectrumCanvas.height = specContainer.clientHeight - 60;
+                
+                // Timeline canvas
+                const timeContainer = this.timelineCanvas.parentElement;
+                this.timelineCanvas.width = timeContainer.clientWidth - 20;
+                this.timelineCanvas.height = timeContainer.clientHeight - 20;
+            }
+            
+            initControls() {
+                document.getElementById('startBtn').addEventListener('click', () => this.start());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+            }
+            
+            async loadData() {
+                try {
+                    const response = await fetch('rf_sensor_data.jsonl');
+                    const text = await response.text();
+                    const lines = text.trim().split('\n');
+                    
+                    this.data = lines.map(line => JSON.parse(line))
+                                   .filter(msg => msg.messageId === 'SPECTRUM_DATA');
+                    
+                    console.log(`Loaded ${this.data.length} spectrum samples`);
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    // Generate dummy data if file not found
+                    this.generateDummyData();
+                }
+            }
+            
+            generateDummyData() {
+                // Fallback dummy data generator
+                this.data = [];
+                for (let i = 0; i < 120; i++) {
+                    const hasDrone = i >= 30 && i <= 50;
+                    const spectrum = [];
+                    
+                    // Generate frequency spectrum
+                    const frequencies = [433, 915, 1575, 2437, 5800];
+                    frequencies.forEach(freq => {
+                        let power = -120 + Math.random() * 20;
+                        if (hasDrone && (freq === 2437 || freq === 5800)) {
+                            power = -50 + Math.random() * 10;
+                        }
+                        spectrum.push({
+                            freq_mhz: freq,
+                            power_dbm: power
+                        });
+                    });
+                    
+                    this.data.push({
+                        messageId: 'SPECTRUM_DATA',
+                        timestamp: new Date(Date.now() + i * 500).toISOString(),
+                        spectrum: spectrum,
+                        detections: hasDrone ? [{
+                            type: 'DRONE_SUSPECTED',
+                            confidence: 0.85,
+                            drone_type: 'DJI_Phantom',
+                            description: 'DJI Phantom detected'
+                        }] : []
+                    });
+                }
+            }
+            
+            start() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.isPaused = false;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('pauseBtn').disabled = false;
+                    document.getElementById('scanStatus').classList.add('active');
+                    this.animate();
+                }
+            }
+            
+            pause() {
+                this.isPaused = !this.isPaused;
+                document.getElementById('pauseBtn').textContent = this.isPaused ? 'RESUME' : 'PAUSE';
+            }
+            
+            reset() {
+                this.isRunning = false;
+                this.isPaused = false;
+                this.currentIndex = 0;
+                this.detections = [];
+                this.spectrumHistory = [];
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = true;
+                document.getElementById('pauseBtn').textContent = 'PAUSE';
+                document.getElementById('scanStatus').classList.remove('active');
+                document.getElementById('threatStatus').classList.remove('alert');
+                document.getElementById('detectionList').innerHTML = '';
+                
+                this.clearCanvas();
+            }
+            
+            clearCanvas() {
+                this.spectrumCtx.clearRect(0, 0, this.spectrumCanvas.width, this.spectrumCanvas.height);
+                this.timelineCtx.clearRect(0, 0, this.timelineCanvas.width, this.timelineCanvas.height);
+            }
+            
+            animate() {
+                if (!this.isRunning) return;
+                
+                if (!this.isPaused && this.currentIndex < this.data.length) {
+                    this.processFrame(this.data[this.currentIndex]);
+                    this.currentIndex++;
+                }
+                
+                // Update time display
+                const elapsed = Math.floor(this.currentIndex / 2);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('timeDisplay').textContent = 
+                    `00:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Loop or continue
+                if (this.currentIndex >= this.data.length) {
+                    this.currentIndex = 0; // Loop
+                }
+                
+                setTimeout(() => this.animate(), 500); // 500ms per frame
+            }
+            
+            processFrame(frame) {
+                // Update spectrum display
+                this.drawSpectrum(frame.spectrum);
+                
+                // Update timeline
+                this.updateTimeline(frame);
+                
+                // Check for detections
+                if (frame.detections && frame.detections.length > 0) {
+                    this.handleDetection(frame.detections[0]);
+                } else {
+                    document.getElementById('threatStatus').classList.remove('alert');
+                    document.getElementById('alertBox').style.display = 'none';
+                }
+            }
+            
+            drawSpectrum(spectrum) {
+                const ctx = this.spectrumCtx;
+                const width = this.spectrumCanvas.width;
+                const height = this.spectrumCanvas.height;
+                
+                // Clear canvas
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Draw grid
+                ctx.strokeStyle = '#003300';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const y = (height / 10) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                
+                // Draw spectrum bars
+                const barWidth = width / spectrum.length;
+                spectrum.forEach((point, index) => {
+                    const x = index * barWidth;
+                    const normalizedPower = (point.power_dbm + 150) / 130; // Normalize -150 to -20 dBm
+                    const barHeight = normalizedPower * height;
+                    
+                    // Color based on power level
+                    let color;
+                    if (point.power_dbm > -60) {
+                        color = `rgb(255, 0, 0)`; // Red for strong signals
+                    } else if (point.power_dbm > -80) {
+                        color = `rgb(255, 255, 0)`; // Yellow for medium
+                    } else if (point.power_dbm > -100) {
+                        color = `rgb(0, 255, 0)`; // Green for weak
+                    } else {
+                        color = `rgb(0, 100, 0)`; // Dark green for noise floor
+                    }
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
+                    
+                    // Add glow effect for strong signals
+                    if (point.power_dbm > -60) {
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
+                        ctx.shadowBlur = 0;
+                    }
+                });
+                
+                // Draw frequency labels
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '10px Courier New';
+                const freqLabels = ['433', '915', '1.5G', '2.4G', '5.8G'];
+                freqLabels.forEach((label, i) => {
+                    const x = (width / freqLabels.length) * i;
+                    ctx.fillText(label, x, height - 5);
+                });
+            }
+            
+            updateTimeline(frame) {
+                // Add to history
+                this.spectrumHistory.push(frame);
+                if (this.spectrumHistory.length > this.maxHistory) {
+                    this.spectrumHistory.shift();
+                }
+                
+                // Draw waterfall display
+                const ctx = this.timelineCtx;
+                const width = this.timelineCanvas.width;
+                const height = this.timelineCanvas.height;
+                
+                // Clear and redraw
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+                
+                const pixelHeight = height / this.maxHistory;
+                const pixelWidth = width / 90; // Number of frequency points
+                
+                this.spectrumHistory.forEach((frame, timeIndex) => {
+                    const y = timeIndex * pixelHeight;
+                    
+                    frame.spectrum.forEach((point, freqIndex) => {
+                        const x = freqIndex * pixelWidth;
+                        const intensity = (point.power_dbm + 150) / 130;
+                        const color = this.getHeatmapColor(intensity);
+                        
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, y, pixelWidth, pixelHeight);
+                    });
+                });
+            }
+            
+            getHeatmapColor(value) {
+                // Create heatmap color from blue to red
+                const r = Math.floor(255 * value);
+                const g = Math.floor(255 * (1 - Math.abs(value - 0.5) * 2));
+                const b = Math.floor(255 * (1 - value));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            handleDetection(detection) {
+                // Update threat indicator
+                document.getElementById('threatStatus').classList.add('alert');
+                
+                // Show alert briefly
+                const alertBox = document.getElementById('alertBox');
+                alertBox.style.display = 'block';
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 2000);
+                
+                // Add to detection list
+                this.addDetectionToList(detection);
+                
+                // Play alert sound (optional)
+                this.playAlertSound();
+            }
+            
+            addDetectionToList(detection) {
+                const list = document.getElementById('detectionList');
+                
+                // Create detection item
+                const item = document.createElement('div');
+                item.className = 'detection-item active';
+                item.innerHTML = `
+                    <h3>${detection.drone_type || 'Unknown Drone'}</h3>
+                    <div class="detection-details">
+                        Type: ${detection.type}<br>
+                        Time: ${new Date().toLocaleTimeString()}
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${detection.confidence * 100}%"></div>
+                    </div>
+                `;
+                
+                // Add to list (max 5 items)
+                list.insertBefore(item, list.firstChild);
+                if (list.children.length > 5) {
+                    list.removeChild(list.lastChild);
+                }
+                
+                // Remove active class after animation
+                setTimeout(() => {
+                    item.classList.remove('active');
+                }, 3000);
+            }
+            
+            playAlertSound() {
+                // Create a simple beep sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800; // Frequency in Hz
+                gainNode.gain.value = 0.1; // Volume
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1); // 100ms beep
+            }
+        }
+        
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            const monitor = new RFMonitor();
+        });
+    </script>
+</body>
+</html>

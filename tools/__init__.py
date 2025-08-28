@@ -45,6 +45,20 @@ from .s4_logistics import (
     ResupplyRequest,
 )
 
+# Import Report Generation tools
+from .report_generation import (
+    generate_logstat_report,
+    generate_perstat_report,
+    generate_spot_report,
+    generate_decision_package,
+    submit_report,
+    # Models
+    LogstatReport,
+    PerstatReport,
+    SpotReport,
+    DecisionPackage,
+)
+
 # Export all tools as a list for easy agent configuration
 ALL_TOOLS = [
     # S-2 Intelligence
@@ -62,6 +76,12 @@ ALL_TOOLS = [
     check_vehicle_status,
     request_resupply,
     calculate_sustainment,
+    # Report Generation
+    generate_logstat_report,
+    generate_perstat_report,
+    generate_spot_report,
+    generate_decision_package,
+    submit_report,
 ]
 
 __all__ = [
@@ -94,6 +114,16 @@ __all__ = [
     'SupplyStatus',
     'VehicleStatus',
     'ResupplyRequest',
+    # Report Generation
+    'generate_logstat_report',
+    'generate_perstat_report',
+    'generate_spot_report',
+    'generate_decision_package',
+    'submit_report',
+    'LogstatReport',
+    'PerstatReport',
+    'SpotReport',
+    'DecisionPackage',
     # Convenience
     'ALL_TOOLS',
 ]

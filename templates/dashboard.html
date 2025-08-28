@@ -6,6 +6,7 @@
     <title>MCOA Command Center</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -135,6 +136,8 @@
                         <button class="quick-btn" data-query="Check unit readiness for 3rd platoon">📊 Readiness</button>
                         <button class="quick-btn" data-query="Assess whether 2nd Battalion can sustain a 72-hour operation in grid 38S MC 12345 67890 starting 0600Z tomorrow. Include weather impacts, terrain mobility, threat level, unit readiness, vehicle availability, comms status, MRE/fuel sufficiency, and recommend resupply if needed. Then provide a final GO/GO WITH CAVEATS/NO-GO decision.">⏱️ 72h Feasibility</button>
                         <button class="quick-btn" data-query="Plan a resupply convoy for 2nd Battalion delivering 1200 MREs by 1200Z tomorrow from the nearest supply point. Assess route weather and terrain, threat level, comms status, vehicle availability, and create a convoy plan with recommended timing. If feasible, submit a PRIORITY resupply request.">🚚 Convoy Plan</button>
+                        <button class="quick-btn frago" id="fetch-frago-btn">📋 Fetch FRAGO</button>
+                        <button class="quick-btn rf-monitor" id="rf-monitor-btn">📡 RF Monitor</button>
                         <button class="quick-btn" id="test-all-btn">🔧 Test All</button>
                         <button class="quick-btn danger" id="clear-btn">🗑️ Clear</button>
                     </div>
@@ -204,6 +207,7 @@
     </div>
 
     <!-- Load JavaScript -->
+    <script src="{{ url_for('static', filename='js/rf_monitor.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
     <!-- Execution Details Modal -->
@@ -217,6 +221,166 @@
                 <!-- Filled dynamically -->
             </div>
         </div>
+    </div>
+
+    <!-- FRAGO Display Modal -->
+    <div id="frago-modal" class="modal-overlay hidden">
+        <div class="modal-window frago-window">
+            <div class="modal-header">
+                <span id="frago-modal-title">📋 FRAGO 024-2024</span>
+                <button id="frago-modal-close" class="modal-close">×</button>
+            </div>
+            <div id="frago-modal-body" class="modal-body">
+                <div class="frago-content">
+                    <pre id="frago-text"></pre>
+                </div>
+                <div class="frago-actions">
+                    <button id="process-frago-btn" class="action-btn primary">🚀 Process FRAGO</button>
+                    <button id="cancel-frago-btn" class="action-btn secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decision Package Modal -->
+    <div id="decision-modal" class="modal-overlay hidden">
+        <div class="modal-window decision-window">
+            <div class="modal-header">
+                <span id="decision-modal-title">🎖️ FRAGO Decision Package</span>
+                <button id="decision-modal-close" class="modal-close">×</button>
+            </div>
+            <div id="decision-modal-body" class="modal-body">
+                <!-- GO/NO-GO Decision -->
+                <div class="decision-status" id="decision-status">
+                    <div class="go-no-go-indicator" id="go-no-go">
+                        <!-- Will show GO, NO-GO, or GO WITH CAVEATS -->
+                    </div>
+                </div>
+                
+                <!-- Analysis Results -->
+                <div class="decision-analysis">
+                    <h3>Analysis Results</h3>
+                    <div id="analysis-content"></div>
+                </div>
+                
+                <!-- Required Reports -->
+                <div class="required-reports">
+                    <h3>Required Reports</h3>
+                    <div id="reports-list" class="reports-grid">
+                        <!-- Report cards will be added here -->
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="decision-actions">
+                    <button id="generate-all-reports-btn" class="action-btn primary">📄 Generate All Reports</button>
+                    <button id="close-decision-btn" class="action-btn secondary">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Display Modal -->
+    <div id="report-modal" class="modal-overlay hidden">
+        <div class="modal-window report-window">
+            <div class="modal-header">
+                <span id="report-modal-title">📄 Report</span>
+                <button id="report-modal-close" class="modal-close">×</button>
+            </div>
+            <div id="report-modal-body" class="modal-body">
+                <div class="report-content" id="report-content">
+                    <!-- Report will be displayed here -->
+                </div>
+                <div class="report-actions">
+                    <button id="download-report-btn" class="action-btn primary">⬇️ Download PDF</button>
+                    <button id="submit-report-btn" class="action-btn success">📤 Submit Report</button>
+                    <button id="close-report-btn" class="action-btn secondary">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF Monitor Modal -->
+    <div id="rf-monitor-modal" class="modal-overlay hidden">
+        <div class="modal-window rf-monitor-window">
+            <div class="modal-header">
+                <span id="rf-monitor-modal-title">📡 RF Spectrum Monitor - Drone Detection</span>
+                <button id="rf-monitor-modal-close" class="modal-close">×</button>
+            </div>
+            <div id="rf-monitor-modal-body" class="rf-monitor-body">
+                <!-- RF Monitor Controls -->
+                <div class="rf-monitor-controls">
+                    <button id="rf-start-btn" class="action-btn primary">▶️ START</button>
+                    <button id="rf-pause-btn" class="action-btn secondary" disabled>⏸️ PAUSE</button>
+                    <button id="rf-reset-btn" class="action-btn">🔄 RESET</button>
+                    <div class="rf-status-indicators">
+                        <span class="rf-status-item">
+                            <span class="rf-status-light" id="rf-sensor-status"></span>
+                            <span>SENSOR</span>
+                        </span>
+                        <span class="rf-status-item">
+                            <span class="rf-status-light" id="rf-scan-status"></span>
+                            <span>SCANNING</span>
+                        </span>
+                        <span class="rf-status-item">
+                            <span class="rf-status-light" id="rf-threat-status"></span>
+                            <span>THREAT</span>
+                        </span>
+                        <span id="rf-time-display">00:00:00</span>
+                    </div>
+                </div>
+                
+                <!-- RF Monitor Display -->
+                <div class="rf-monitor-display">
+                    <!-- Spectrum Analyzer -->
+                    <div class="rf-spectrum-container">
+                        <canvas id="rf-spectrum-canvas"></canvas>
+                        <div class="rf-freq-labels">
+                            <span>433 MHz</span>
+                            <span>915 MHz</span>
+                            <span>1.5 GHz</span>
+                            <span>2.4 GHz</span>
+                            <span>5.8 GHz</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Detection Panel -->
+                    <div class="rf-detection-panel">
+                        <h4>THREAT DETECTIONS</h4>
+                        <div id="rf-detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- Report Display Panel -->
+                <div class="rf-report-panel" id="rf-report-panel" style="display: none;">
+                    <div class="rf-report-header">
+                        <h4>📄 DRONE DETECTION REPORT</h4>
+                        <div class="rf-report-status" id="rf-report-status">
+                            <span class="generating-indicator">⏳ Generating Report...</span>
+                        </div>
+                    </div>
+                    <div class="rf-report-content" id="rf-report-content">
+                        <!-- Report will be displayed here -->
+                    </div>
+                    <div class="rf-report-actions">
+                        <button class="action-btn primary" id="rf-save-report">💾 Save TXT</button>
+                        <button class="action-btn success" id="rf-download-pdf">📄 Download PDF</button>
+                        <button class="action-btn secondary" id="rf-transmit-report">📡 Transmit</button>
+                        <button class="action-btn" id="rf-close-report">Close</button>
+                    </div>
+                </div>
+                
+                <!-- Timeline Waterfall -->
+                <div class="rf-timeline-container">
+                    <canvas id="rf-timeline-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF Alert Overlay -->
+    <div class="rf-alert-box" id="rf-alert-box">
+        ⚠️ DRONE DETECTED ⚠️
     </div>
 </body>
 </html>

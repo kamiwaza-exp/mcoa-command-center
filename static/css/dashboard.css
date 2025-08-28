@@ -356,8 +356,145 @@ body {
 
 .message-content {
     font-size: 0.9rem;
-    line-height: 1.4;
-    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+/* Markdown styling for all rendered content areas */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.report-content h1,
+.report-content h2,
+.report-content h3,
+.report-content h4,
+#analysis-content h1,
+#analysis-content h2,
+#analysis-content h3,
+#analysis-content h4 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.message-content h1,
+.report-content h1,
+#analysis-content h1 { font-size: 1.5rem; }
+
+.message-content h2,
+.report-content h2,
+#analysis-content h2 { font-size: 1.3rem; }
+
+.message-content h3,
+.report-content h3,
+#analysis-content h3 { font-size: 1.1rem; }
+
+.message-content h4,
+.report-content h4,
+#analysis-content h4 { font-size: 1rem; }
+
+.message-content p,
+.report-content p,
+#analysis-content p {
+    margin: 0.5rem 0;
+}
+
+.message-content ul,
+.message-content ol,
+.report-content ul,
+.report-content ol,
+#analysis-content ul,
+#analysis-content ol {
+    margin: 0.5rem 0 0.5rem 1.5rem;
+}
+
+.message-content li,
+.report-content li,
+#analysis-content li {
+    margin: 0.25rem 0;
+}
+
+.message-content code,
+.report-content code,
+#analysis-content code {
+    background: rgba(0, 150, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.message-content pre,
+.report-content pre,
+#analysis-content pre {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.message-content pre code,
+.report-content pre code,
+#analysis-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.message-content blockquote,
+.report-content blockquote,
+#analysis-content blockquote {
+    border-left: 4px solid var(--accent-orange);
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+}
+
+.message-content table,
+.report-content table,
+#analysis-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5rem 0;
+}
+
+.message-content table th,
+.message-content table td,
+.report-content table th,
+.report-content table td,
+#analysis-content table th,
+#analysis-content table td {
+    border: 1px solid var(--border-color);
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.message-content table th,
+.report-content table th,
+#analysis-content table th {
+    background: var(--bg-secondary);
+    font-weight: bold;
+}
+
+.message-content strong,
+.report-content strong,
+#analysis-content strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.message-content em,
+.report-content em,
+#analysis-content em {
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.message-content hr,
+.report-content hr,
+#analysis-content hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1rem 0;
 }
 
 /* Chat Input */
@@ -663,4 +800,663 @@ body {
     padding: 1rem;
     overflow: auto;
     font-family: var(--font-display);
+}
+
+/* FRAGO Specific Modal Styles */
+.frago-window {
+    width: 80vw;
+    max-width: 900px;
+}
+
+.frago-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.frago-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+.frago-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Decision Package Styles */
+.decision-window {
+    width: 85vw;
+    max-width: 1100px;
+}
+
+.decision-status {
+    text-align: center;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.go-no-go-indicator {
+    display: inline-block;
+    padding: 1rem 3rem;
+    font-size: 2rem;
+    font-weight: bold;
+    border-radius: 8px;
+    border: 3px solid;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.go-no-go-indicator.go {
+    background: rgba(39, 174, 96, 0.2);
+    border-color: var(--success-color);
+    color: var(--success-color);
+    box-shadow: 0 0 20px rgba(39, 174, 96, 0.3);
+}
+
+.go-no-go-indicator.no-go {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+}
+
+.go-no-go-indicator.go-caveats {
+    background: rgba(243, 156, 18, 0.2);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+    box-shadow: 0 0 20px rgba(243, 156, 18, 0.3);
+}
+
+.decision-analysis {
+    margin-bottom: 1.5rem;
+}
+
+.decision-analysis h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.decision-analysis pre {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.required-reports {
+    margin-bottom: 1.5rem;
+}
+
+.required-reports h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+/* Report Card Styles */
+.report-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.report-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.report-icon {
+    font-size: 1.5rem;
+}
+
+.report-type {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.report-card-status {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.status-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.status-text.generating {
+    color: var(--warning-color);
+    animation: pulse 1s infinite;
+}
+
+.status-text.generated {
+    color: var(--success-color);
+}
+
+.status-text.submitted {
+    color: var(--s4-color);
+    font-weight: bold;
+}
+
+.report-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.report-card-actions button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.report-card-actions button:hover {
+    background: var(--bg-primary);
+    transform: translateY(-1px);
+}
+
+.report-card-actions button.hidden {
+    display: none;
+}
+
+.btn-generate {
+    border-color: var(--warning-color) !important;
+    color: var(--warning-color) !important;
+}
+
+.btn-view {
+    border-color: var(--s4-color) !important;
+    color: var(--s4-color) !important;
+}
+
+.btn-submit {
+    border-color: var(--success-color) !important;
+    color: var(--success-color) !important;
+}
+
+/* Decision Actions */
+.decision-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Report Modal */
+.report-window {
+    width: 75vw;
+    max-width: 900px;
+}
+
+.report-content {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.report-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.report-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Action Button Styles */
+.action-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: 2px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.action-btn.primary {
+    background: var(--s4-color);
+    border-color: var(--s4-color);
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.action-btn.secondary {
+    background: transparent;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.action-btn.secondary:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.action-btn.success {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+.action-btn.success:hover {
+    background: #229954;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* FRAGO Button Style */
+.quick-btn.frago {
+    background: rgba(155, 89, 182, 0.1);
+    border-color: var(--s2-color);
+    color: var(--s2-color);
+    font-weight: bold;
+}
+
+.quick-btn.frago:hover {
+    background: rgba(155, 89, 182, 0.2);
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+    transform: translateY(-2px);
+}
+
+/* ============== RF MONITOR STYLES ============== */
+
+.rf-monitor-window {
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    max-height: 800px;
+}
+
+.rf-monitor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: calc(100% - 60px);
+    padding: 15px;
+}
+
+.rf-monitor-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #0d0d0d;
+    border-radius: 5px;
+    border: 1px solid #333;
+}
+
+.rf-status-indicators {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.rf-status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #999;
+}
+
+.rf-status-light {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #333;
+}
+
+.rf-status-light.active {
+    background: #00ff00;
+    box-shadow: 0 0 10px #00ff00;
+    animation: pulse 1s infinite;
+}
+
+.rf-status-light.alert {
+    background: #ff0000;
+    box-shadow: 0 0 10px #ff0000;
+    animation: pulse 0.5s infinite;
+}
+
+.rf-monitor-display {
+    display: grid;
+    grid-template-columns: 1fr 250px;
+    gap: 15px;
+    flex: 1;
+    min-height: 300px;
+}
+
+.rf-spectrum-container {
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 10px;
+    position: relative;
+}
+
+#rf-spectrum-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.rf-freq-labels {
+    position: absolute;
+    bottom: 5px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+}
+
+.rf-detection-panel {
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.rf-detection-panel h4 {
+    color: #00ff00;
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+    font-size: 14px;
+}
+
+.rf-detection-item {
+    background: #1a1a1a;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 3px;
+    border-left: 3px solid #666;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.rf-detection-item.active {
+    border-left-color: #ff0000;
+    background: #1a0d0d;
+    animation: slideIn 0.3s ease-out;
+}
+
+.rf-confidence-bar {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    margin-top: 5px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.rf-confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+    transition: width 0.3s ease;
+}
+
+.rf-timeline-container {
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 10px;
+    height: 150px;
+}
+
+#rf-timeline-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.rf-alert-box {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 0, 0, 0.9);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 5px;
+    font-size: 24px;
+    font-weight: bold;
+    display: none;
+    animation: alertPulse 0.5s infinite;
+    z-index: 10000;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes alertPulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.quick-btn.rf-monitor {
+    background: #1a0033;
+    border-color: #6600ff;
+}
+
+.quick-btn.rf-monitor:hover {
+    background: #6600ff;
+    color: #000;
+}
+
+/* RF Report Panel Styles */
+.rf-report-panel {
+    position: fixed;  /* Use fixed instead of absolute */
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    max-width: 900px;
+    max-height: 80vh;
+    background: #1a1a1a;
+    border: 2px solid #00ff00;
+    border-radius: 5px;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.rf-report-header {
+    flex-shrink: 0;  /* Prevent shrinking */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #0d0d0d;
+    border-bottom: 1px solid #00ff00;
+}
+
+.rf-report-header h4 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 16px;
+}
+
+.rf-report-status {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.generating-indicator {
+    color: #ffff00;
+    animation: pulse 1s infinite;
+}
+
+.report-ready {
+    color: #00ff00;
+}
+
+.report-error {
+    color: #ff0000;
+}
+
+.threat-high {
+    color: #ff0000;
+    font-weight: bold;
+    animation: pulse 0.5s infinite;
+}
+
+.threat-moderate {
+    color: #ff9900;
+    font-weight: bold;
+}
+
+.rf-report-content {
+    flex: 1 1 auto;  /* Allow to grow and shrink */
+    overflow-y: scroll;  /* Always show scrollbar */
+    overflow-x: hidden;
+    padding: 15px;
+    background: #0d0d0d;
+    min-height: 200px;
+    max-height: calc(80vh - 120px);  /* Account for header and actions */
+}
+
+/* Style the scrollbar */
+.rf-report-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.rf-report-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 5px;
+}
+
+.rf-report-content::-webkit-scrollbar-thumb {
+    background: #00ff00;
+    border-radius: 5px;
+    opacity: 0.7;
+}
+
+.rf-report-content::-webkit-scrollbar-thumb:hover {
+    background: #00cc00;
+}
+
+.rf-report-text {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #00ff00;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    margin: 0;
+    word-wrap: break-word;
+}
+
+.rf-report-actions {
+    flex-shrink: 0;  /* Prevent shrinking */
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    justify-content: flex-end;
+}
+
+.save-success {
+    color: #00ff00;
+}
+
+.transmit-progress {
+    color: #ffff00;
+    animation: pulse 1s infinite;
+}
+
+.transmit-success {
+    color: #00ff00;
+}
+
+.pdf-progress {
+    color: #ffff00;
+    animation: pulse 1s infinite;
+}
+
+.pdf-success {
+    color: #00ff00;
+}
+
+.pdf-error {
+    color: #ff0000;
 }
