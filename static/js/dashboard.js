@@ -36,12 +36,31 @@ const elements = {
     modalClose: document.getElementById('modal-close')
 };
 
+// Markdown rendering helper
+function renderMarkdown(content) {
+    // Configure marked options for safety
+    marked.setOptions({
+        breaks: true,  // Convert \n to <br>
+        gfm: true,     // GitHub Flavored Markdown
+        sanitize: false // We'll trust our own content
+    });
+    
+    // Render markdown to HTML
+    return marked.parse(content);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
+    initializeFragoElements();  // Initialize FRAGO elements after DOM is ready
     updateTimestamp();
     setInterval(updateTimestamp, 1000);
     setInterval(updateSessionTime, 1000);
+    
+    // Initialize RF Monitor
+    if (typeof initRFMonitor === 'function') {
+        initRFMonitor();
+    }
 });
 
 // Event Listeners
@@ -376,7 +395,13 @@ function addMessage(type, content) {
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
+    
+    // Render markdown for assistant and system messages
+    if (type === 'assistant' || type === 'system') {
+        contentDiv.innerHTML = renderMarkdown(content);
+    } else {
+        contentDiv.textContent = content;
+    }
     
     messageDiv.appendChild(header);
     messageDiv.appendChild(contentDiv);
@@ -611,3 +636,404 @@ function updateSessionTime() {
 
 // Auto-focus on input
 elements.queryInput.focus();
+
+// ============== FRAGO FUNCTIONALITY ==============
+
+// FRAGO state management
+const fragoState = {
+    currentFrago: null,
+    decisionPackage: null,
+    requiredReports: [],
+    generatedReports: {}
+};
+
+// FRAGO Modal Elements (initialized after DOM loads)
+let fragoElements = {};
+
+// Initialize FRAGO elements and event listeners
+function initializeFragoElements() {
+    fragoElements = {
+        fetchBtn: document.getElementById('fetch-frago-btn'),
+        fragoModal: document.getElementById('frago-modal'),
+        fragoText: document.getElementById('frago-text'),
+        processBtn: document.getElementById('process-frago-btn'),
+        cancelBtn: document.getElementById('cancel-frago-btn'),
+        fragoModalClose: document.getElementById('frago-modal-close'),
+        
+        decisionModal: document.getElementById('decision-modal'),
+        decisionStatus: document.getElementById('go-no-go'),
+        analysisContent: document.getElementById('analysis-content'),
+        reportsList: document.getElementById('reports-list'),
+        generateAllBtn: document.getElementById('generate-all-reports-btn'),
+        closeDecisionBtn: document.getElementById('close-decision-btn'),
+        decisionModalClose: document.getElementById('decision-modal-close'),
+        
+        reportModal: document.getElementById('report-modal'),
+        reportContent: document.getElementById('report-content'),
+        downloadReportBtn: document.getElementById('download-report-btn'),
+        submitReportBtn: document.getElementById('submit-report-btn'),
+        closeReportBtn: document.getElementById('close-report-btn'),
+        reportModalClose: document.getElementById('report-modal-close')
+    };
+    
+    // Initialize FRAGO event listeners
+    if (fragoElements.fetchBtn) {
+        // Fetch FRAGO button
+        fragoElements.fetchBtn.addEventListener('click', async () => {
+            await fetchFrago();
+        });
+    }
+    
+    // Process FRAGO button
+    fragoElements.processBtn?.addEventListener('click', () => {
+        if (fragoState.currentFrago) {
+            processFrago();
+        }
+    });
+    
+    // Cancel/Close buttons
+    fragoElements.cancelBtn?.addEventListener('click', () => hideFragoModal());
+    fragoElements.fragoModalClose?.addEventListener('click', () => hideFragoModal());
+    fragoElements.closeDecisionBtn?.addEventListener('click', () => hideDecisionModal());
+    fragoElements.decisionModalClose?.addEventListener('click', () => hideDecisionModal());
+    fragoElements.closeReportBtn?.addEventListener('click', () => hideReportModal());
+    fragoElements.reportModalClose?.addEventListener('click', () => hideReportModal());
+    
+    // Generate all reports button
+    fragoElements.generateAllBtn?.addEventListener('click', () => {
+        generateAllReports();
+    });
+    
+    // Submit report button
+    fragoElements.submitReportBtn?.addEventListener('click', () => {
+        submitCurrentReport();
+    });
+    
+    // Download report button
+    fragoElements.downloadReportBtn?.addEventListener('click', () => {
+        downloadCurrentReport();
+    });
+}
+
+// Fetch FRAGO from server
+async function fetchFrago() {
+    try {
+        addSystemMessage('Fetching FRAGO...');
+        const response = await fetch('/api/frago/fetch');
+        const frago = await response.json();
+        
+        fragoState.currentFrago = frago;
+        displayFrago(frago);
+    } catch (error) {
+        console.error('Error fetching FRAGO:', error);
+        addMessage('error', 'Failed to fetch FRAGO: ' + error.message);
+    }
+}
+
+// Display FRAGO in modal
+function displayFrago(frago) {
+    if (fragoElements.fragoText) {
+        fragoElements.fragoText.textContent = frago.text;
+        document.getElementById('frago-modal-title').textContent = `📋 FRAGO ${frago.frago_id}`;
+    }
+    showFragoModal();
+}
+
+// Process FRAGO through backend
+function processFrago() {
+    if (!fragoState.currentFrago) return;
+    
+    hideFragoModal();
+    addMessage('system', `Processing FRAGO ${fragoState.currentFrago.frago_id}...`);
+    
+    // Send to backend for processing
+    socket.emit('process_frago', {
+        frago: fragoState.currentFrago.text
+    });
+}
+
+// Handle FRAGO processing status
+socket.on('frago_status', (data) => {
+    addSystemMessage(`FRAGO Processing: ${data.message}`);
+});
+
+// Handle FRAGO decision package
+socket.on('frago_decision_package', (data) => {
+    console.log('Received decision package:', data);
+    fragoState.decisionPackage = data;
+    fragoState.requiredReports = data.required_reports || [];
+    
+    displayDecisionPackage(data);
+});
+
+// Display decision package
+function displayDecisionPackage(package) {
+    // Set GO/NO-GO decision
+    const goNoGo = fragoElements.decisionStatus;
+    if (goNoGo) {
+        goNoGo.className = 'go-no-go-indicator';
+        goNoGo.textContent = package.decision || 'PENDING';
+        
+        if (package.decision === 'GO') {
+            goNoGo.classList.add('go');
+        } else if (package.decision === 'NO-GO') {
+            goNoGo.classList.add('no-go');
+        } else {
+            goNoGo.classList.add('go-caveats');
+        }
+    }
+    
+    // Display analysis
+    if (fragoElements.analysisContent) {
+        fragoElements.analysisContent.innerHTML = renderMarkdown(package.analysis || 'No analysis available');
+    }
+    
+    // Display required reports
+    if (fragoElements.reportsList) {
+        fragoElements.reportsList.innerHTML = '';
+        const reports = package.required_reports || [];
+        
+        if (reports.length === 0) {
+            fragoElements.reportsList.innerHTML = '<p>No reports required</p>';
+        } else {
+            reports.forEach(reportType => {
+                const reportCard = createReportCard(reportType);
+                fragoElements.reportsList.appendChild(reportCard);
+            });
+        }
+    }
+    
+    showDecisionModal();
+}
+
+// Create report card element
+function createReportCard(reportType) {
+    const card = document.createElement('div');
+    card.className = 'report-card';
+    card.dataset.reportType = reportType;
+    
+    const icon = reportType === 'LOGSTAT' ? '📦' : 
+                 reportType === 'PERSTAT' ? '👥' : 
+                 reportType === 'SPOT' ? '🎯' : '📄';
+    
+    card.innerHTML = `
+        <div class="report-card-header">
+            <span class="report-icon">${icon}</span>
+            <span class="report-type">${reportType}</span>
+        </div>
+        <div class="report-card-status" id="status-${reportType}">
+            <span class="status-text">Not Generated</span>
+        </div>
+        <div class="report-card-actions">
+            <button class="btn-generate" onclick="generateReport('${reportType}')">Generate</button>
+            <button class="btn-view hidden" onclick="viewReport('${reportType}')">View</button>
+            <button class="btn-submit hidden" onclick="submitReport('${reportType}')">Submit</button>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Generate specific report
+function generateReport(reportType) {
+    addSystemMessage(`Generating ${reportType}...`);
+    
+    // Update card status
+    const statusEl = document.getElementById(`status-${reportType}`);
+    if (statusEl) {
+        statusEl.innerHTML = '<span class="status-text generating">Generating...</span>';
+    }
+    
+    // Send generation request
+    socket.emit('generate_report', {
+        report_type: reportType,
+        data: {
+            unit: '3rd PLT',
+            issue: fragoState.decisionPackage?.analysis?.includes('fuel') ? 'fuel shortfall' : 'operational requirement',
+            location: 'grid 38S MC 45678 12345'
+        }
+    });
+}
+
+// Generate all required reports
+function generateAllReports() {
+    fragoState.requiredReports.forEach(reportType => {
+        generateReport(reportType);
+    });
+}
+
+// Handle report generation complete
+socket.on('report_generated', (data) => {
+    console.log('Report generated:', data);
+    fragoState.generatedReports[data.report_type] = {
+        content: data.content,
+        pdf_path: data.pdf_path
+    };
+    
+    // Update card status
+    const statusEl = document.getElementById(`status-${data.report_type}`);
+    if (statusEl) {
+        statusEl.innerHTML = '<span class="status-text generated">Generated ✓</span>';
+    }
+    
+    // Show view and submit buttons
+    const card = document.querySelector(`[data-report-type="${data.report_type}"]`);
+    if (card) {
+        card.querySelector('.btn-generate')?.classList.add('hidden');
+        card.querySelector('.btn-view')?.classList.remove('hidden');
+        card.querySelector('.btn-submit')?.classList.remove('hidden');
+    }
+    
+    addSystemMessage(`${data.report_type} generated successfully`);
+});
+
+// View report
+function viewReport(reportType) {
+    const reportData = fragoState.generatedReports[reportType];
+    if (reportData) {
+        document.getElementById('report-modal-title').textContent = `📄 ${reportType}`;
+        fragoElements.reportContent.innerHTML = renderMarkdown(reportData.content);
+        fragoElements.submitReportBtn.dataset.reportType = reportType;
+        fragoElements.downloadReportBtn.dataset.reportType = reportType;
+        fragoElements.downloadReportBtn.dataset.pdfPath = reportData.pdf_path || '';
+        showReportModal();
+    }
+}
+
+// Submit report
+function submitReport(reportType) {
+    const reportData = fragoState.generatedReports[reportType];
+    socket.emit('submit_report', {
+        report_type: reportType,
+        pdf_path: reportData?.pdf_path || '',
+        destination: reportType === 'LOGSTAT' ? 'Battalion S-4' : 
+                     reportType === 'PERSTAT' ? 'Battalion S-1' :
+                     reportType === 'SPOT' ? 'Battalion S-2' : 'Battalion HQ'
+    });
+}
+
+// Submit current report (from modal)
+function submitCurrentReport() {
+    const reportType = fragoElements.submitReportBtn.dataset.reportType;
+    if (reportType) {
+        submitReport(reportType);
+        hideReportModal();
+    }
+}
+
+// Download current report PDF
+function downloadCurrentReport() {
+    const reportType = fragoElements.downloadReportBtn.dataset.reportType;
+    const pdfPath = fragoElements.downloadReportBtn.dataset.pdfPath;
+    
+    if (pdfPath) {
+        // Extract just the filename from the path
+        const filename = pdfPath.split('/').pop();
+        
+        // Create download link
+        const downloadUrl = `/api/reports/download/${filename}`;
+        
+        // Create temporary anchor element to trigger download
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        addSystemMessage(`Downloading ${reportType} PDF...`);
+    } else {
+        addMessage('warning', `No PDF available for ${reportType}. The report may not have been generated with PDF output.`);
+    }
+}
+
+// Handle report submission confirmation
+socket.on('report_submitted', (data) => {
+    console.log('Report submitted:', data);
+    
+    // Update card status with Discord indicator
+    const statusEl = document.getElementById(`status-${data.report_type}`);
+    if (statusEl) {
+        const discordIndicator = data.discord_sent ? ' 📤' : '';
+        statusEl.innerHTML = `<span class="status-text submitted">Submitted ✓ ${data.confirmation}${discordIndicator}</span>`;
+    }
+    
+    // Show success message with Discord status
+    const discordMsg = data.discord_sent ? ' Report posted to Discord channel.' : '';
+    addMessage('success', data.message + discordMsg);
+});
+
+// Handle FRAGO errors
+socket.on('frago_error', (data) => {
+    addMessage('error', `FRAGO Error: ${data.message}`);
+});
+
+// Modal show/hide functions
+function showFragoModal() {
+    fragoElements.fragoModal?.classList.remove('hidden');
+}
+
+function hideFragoModal() {
+    fragoElements.fragoModal?.classList.add('hidden');
+}
+
+function showDecisionModal() {
+    fragoElements.decisionModal?.classList.remove('hidden');
+}
+
+function hideDecisionModal() {
+    fragoElements.decisionModal?.classList.add('hidden');
+}
+
+function showReportModal() {
+    fragoElements.reportModal?.classList.remove('hidden');
+}
+
+function hideReportModal() {
+    fragoElements.reportModal?.classList.add('hidden');
+}
+
+// Add success message type
+function addMessage(type, content) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}-message`;
+    
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    
+    if (type === 'success') {
+        header.textContent = '✅ SUCCESS';
+        messageDiv.style.borderColor = '#27ae60';
+    } else if (type === 'system') {
+        header.textContent = '⚙️ SYSTEM';
+        messageDiv.style.borderColor = '#3498db';
+    } else if (type === 'user') {
+        header.textContent = '👤 USER';
+    } else if (type === 'assistant') {
+        header.textContent = '🎖️ MCOA';
+    } else if (type === 'error') {
+        header.textContent = '❌ ERROR';
+        messageDiv.style.borderColor = '#e74c3c';
+    } else if (type === 'warning') {
+        header.textContent = '⚠️ WARNING';
+        messageDiv.style.borderColor = '#f39c12';
+    }
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    
+    // Render markdown for assistant and system messages
+    if (type === 'assistant' || type === 'system') {
+        contentDiv.innerHTML = renderMarkdown(content);
+    } else {
+        contentDiv.textContent = content;
+    }
+    
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(contentDiv);
+    
+    elements.chatMessages.appendChild(messageDiv);
+    requestAnimationFrame(() => {
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+    });
+}

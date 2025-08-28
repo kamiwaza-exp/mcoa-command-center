@@ -1,0 +1,24 @@
+{
+  "total_messages": 50000,
+  "message_types": {
+    "REMOTE_JOIN_RESP": 12601,
+    "ACTIVE_MODE_IND": 12487,
+    "BATTERY_IND": 12447,
+    "GPS_IND": 12465
+  },
+  "unique_sources": 1,
+  "total_connections": 18715,
+  "sensors_detected": 1,
+  "sensor_details": [
+    {
+      "name": "Local Sensor View",
+      "serial": "P11A-11210037",
+      "type": "CTL26",
+      "freq_range_ghz": {
+        "min": 0.03,
+        "max": 26.5
+      },
+      "connections": 12601
+    }
+  ]
+}

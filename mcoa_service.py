@@ -137,7 +137,7 @@ class MCOAService:
         # Import and configure the command agent with monitored tools
         from mcoa_agents_ui import command_agent
         
-        # Update command agent with all monitored tools
+        # Update command agent with all monitored tools (including report generation)
         command_agent.tools = tools.ALL_TOOLS
         
         # Apply guardrails
@@ -145,41 +145,44 @@ class MCOAService:
         
         # Store reference
         self.command_agent = command_agent
+        
+        # Initialize FRAGO interpreter (lazy loading)
+        self._frago_interpreter = None
+    
+    def _to_text(self, obj: Any) -> str:
+        """Convert various output types to a readable string for the UI/chat.
+
+        - str: returned as-is
+        - Pydantic v2/v1 models: dump to dict (by_alias) and JSON stringify
+        - dict/list: JSON stringify
+        - other: use str()
+        """
+        if obj is None:
+            return ""
+        if isinstance(obj, str):
+            return obj
+        try:
+            # Pydantic v2
+            if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
+                data = obj.model_dump(by_alias=True)
+                return json.dumps(data, ensure_ascii=False, indent=2)
+            # Pydantic v1
+            if hasattr(obj, "dict") and callable(getattr(obj, "dict")):
+                data = obj.dict(by_alias=True)
+                return json.dumps(data, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+        if isinstance(obj, (dict, list)):
+            try:
+                return json.dumps(obj, ensure_ascii=False, indent=2)
+            except Exception:
+                return str(obj)
+
+        return str(obj)
     
     async def process_query(self, query: str) -> Dict[str, Any]:
         """Process a query and return response with metadata."""
-
-        def _to_text(obj: Any) -> str:
-            """Convert various output types to a readable string for the UI/chat.
-
-            - str: returned as-is
-            - Pydantic v2/v1 models: dump to dict (by_alias) and JSON stringify
-            - dict/list: JSON stringify
-            - other: use str()
-            """
-            if obj is None:
-                return ""
-            if isinstance(obj, str):
-                return obj
-            try:
-                # Pydantic v2
-                if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
-                    data = obj.model_dump(by_alias=True)
-                    return json.dumps(data, ensure_ascii=False, indent=2)
-                # Pydantic v1
-                if hasattr(obj, "dict") and callable(getattr(obj, "dict")):
-                    data = obj.dict(by_alias=True)
-                    return json.dumps(data, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
-
-            if isinstance(obj, (dict, list)):
-                try:
-                    return json.dumps(obj, ensure_ascii=False, indent=2)
-                except Exception:
-                    return str(obj)
-
-            return str(obj)
 
         try:
             # Emit processing start
@@ -206,9 +209,9 @@ class MCOAService:
             # Prefer a narrative field from feasibility tool if present
             final = result.final_output
             if isinstance(final, dict) and "narrative" in final:
-                response_text = _to_text(final.get("narrative"))
+                response_text = self._to_text(final.get("narrative"))
             else:
-                response_text = _to_text(final)
+                response_text = self._to_text(final)
             
             # Update conversation history
             if response_text:
@@ -284,3 +287,79 @@ class MCOAService:
             self.tool_callback('history_cleared', {
                 'timestamp': datetime.now().isoformat()
             })
+    
+    def add_context_to_history(self, content: str, role: str = "system"):
+        """Add contextual information to conversation history."""
+        self.conversation_history.append({
+            "content": content,
+            "role": role
+        })
+    
+    def get_frago_interpreter(self):
+        """Get or create FRAGO interpreter agent with all tools."""
+        if self._frago_interpreter is None:
+            # Import FRAGO agents
+            from mcoa_agents.frago_agents import create_frago_interpreter
+            
+            # Create interpreter with all existing tools
+            self._frago_interpreter = create_frago_interpreter(tools.ALL_TOOLS)
+            
+            # Apply guardrails
+            self._frago_interpreter.input_guardrails = get_security_guardrails()
+        
+        return self._frago_interpreter
+    
+    async def process_frago(self, frago_text: str) -> Dict[str, Any]:
+        """Process a FRAGO document and return decision package."""
+        frago_agent = self.get_frago_interpreter()
+        
+        # Add FRAGO to conversation history for context
+        self.conversation_history.append({
+            "content": f"[FRAGO RECEIVED]\n{frago_text}",
+            "role": "user"
+        })
+        
+        # Process through FRAGO-specific agent
+        try:
+            if self.tool_callback:
+                self.tool_callback('processing_start', {'query': 'FRAGO Processing'})
+            
+            # Run the FRAGO interpreter
+            result = await Runner.run(frago_agent, frago_text, max_turns=25)
+            
+            # Extract decision package
+            final_output = result.final_output
+            response_text = self._to_text(final_output)
+            
+            # Add FRAGO analysis to conversation history
+            self.conversation_history.append({
+                "content": f"[FRAGO ANALYSIS]\n{response_text}",
+                "role": "assistant"
+            })
+            
+            if self.tool_callback:
+                self.tool_callback('processing_complete', {
+                    'query': 'FRAGO Processing',
+                    'response': response_text
+                })
+            
+            return {
+                'success': True,
+                'response': response_text,
+                'frago_processed': True,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            if self.tool_callback:
+                self.tool_callback('processing_error', {
+                    'query': 'FRAGO Processing',
+                    'error': str(e)
+                })
+            
+            return {
+                'success': False,
+                'response': f"Error processing FRAGO: {str(e)}",
+                'error': True,
+                'timestamp': datetime.now().isoformat()
+            }

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        input[type="file"] {
+            padding: 8px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        input[type="file"]:hover {
+            border-color: #764ba2;
+            background: #f0f0ff;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .dashboard {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .card-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        #map {
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .timeline {
+            height: 100px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            margin-top: 20px;
+        }
+        
+        .timeline-item {
+            display: inline-block;
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .timeline-item:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+        
+        .timeline-item.active {
+            background: #764ba2;
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.3);
+        }
+        
+        .classification-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .classification-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .classification-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .confidence-bar {
+            width: 100px;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+        
+        .info-message {
+            padding: 15px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #1565c0;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+        
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .classification-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ffee00;
+            color: #000;
+            text-align: center;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 2px;
+            z-index: 9999;
+            border-bottom: 2px solid #000;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .classification-banner.bottom {
+            top: auto;
+            bottom: 0;
+            border-bottom: none;
+            border-top: 2px solid #000;
+        }
+        
+        body {
+            padding-top: 30px;
+            padding-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="classification-banner">UNCLASSIFIED</div>
+    <div class="classification-banner bottom">UNCLASSIFIED</div>
+    
+    <div class="container">
+        <header>
+            <h1>🛰️ Sensor Data Visualization Dashboard</h1>
+            <div class="subtitle">Real-time Tracking and Analysis System</div>
+        </header>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="fileInput">Load HAR File:</label>
+                <input type="file" id="fileInput" accept=".har">
+            </div>
+            <button id="loadSampleBtn">Load Sample Data</button>
+            <button id="playBtn" disabled>▶️ Play Animation</button>
+            <button id="resetBtn" disabled>🔄 Reset View</button>
+        </div>
+        
+        <div class="dashboard">
+            <div class="card full-width">
+                <div class="info-message">
+                    📊 Upload a HAR file or click "Load Sample Data" to begin visualization
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">📍 Geographic Location</h2>
+                <div id="map"></div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="latValue">-</div>
+                        <div class="stat-label">Latitude</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="lonValue">-</div>
+                        <div class="stat-label">Longitude</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="altValue">-</div>
+                        <div class="stat-label">Altitude (m)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="speedValue">-</div>
+                        <div class="stat-label">Speed (m/s)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">📡 Observation Data</h2>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="rangeValue">-</div>
+                        <div class="stat-label">Range (m)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="velocityValue">-</div>
+                        <div class="stat-label">Radial Velocity</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">🎯 Object Classifications</h2>
+                <div class="classification-list" id="classificationList">
+                    <p style="color: #999; text-align: center; padding: 20px;">No data loaded</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">📊 Signal Statistics</h2>
+                <div class="chart-container">
+                    <canvas id="signalChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card full-width">
+                <h2 class="card-title">⏱️ Timeline</h2>
+                <div class="timeline" id="timeline">
+                    <p style="color: #999; text-align: center; padding: 20px;">No timeline data available</p>
+                </div>
+                <div class="chart-container" style="margin-top: 20px; height: 200px;">
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let radarChart;
+        let signalChart;
+        let timeSeriesChart;
+        let sensorData = [];
+        let currentDataIndex = 0;
+        let animationInterval;
+        let marker;
+        let trackLine;
+        
+        // Initialize Leaflet map
+        function initMap() {
+            map = L.map('map').setView([21.4514, -157.7769], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+        
+        // Initialize Charts
+        function initCharts() {
+            // Radar Chart
+            const radarCtx = document.getElementById('radarChart').getContext('2d');
+            radarChart = new Chart(radarCtx, {
+                type: 'polarArea',
+                data: {
+                    labels: ['Range', 'Velocity', 'Horizontal Angle', 'Azimuth', 'Altitude Angle'],
+                    datasets: [{
+                        label: 'Observation Metrics',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.5)',
+                            'rgba(118, 75, 162, 0.5)',
+                            'rgba(237, 117, 99, 0.5)',
+                            'rgba(95, 186, 125, 0.5)',
+                            'rgba(252, 196, 95, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(102, 126, 234, 1)',
+                            'rgba(118, 75, 162, 1)',
+                            'rgba(237, 117, 99, 1)',
+                            'rgba(95, 186, 125, 1)',
+                            'rgba(252, 196, 95, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Signal Statistics Chart
+            const signalCtx = document.getElementById('signalChart').getContext('2d');
+            signalChart = new Chart(signalCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Amplitude', 'RCS', 'SNR', 'Energy Mean'],
+                    datasets: [{
+                        label: 'Signal Statistics',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Time Series Chart
+            const timeCtx = document.getElementById('timeSeriesChart').getContext('2d');
+            timeSeriesChart = new Chart(timeCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Range Over Time',
+                        data: [],
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Speed Over Time',
+                        data: [],
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Parse HAR file
+        function parseHARFile(harContent) {
+            try {
+                const har = JSON.parse(harContent);
+                const entries = har.log.entries;
+                const extractedData = [];
+                
+                entries.forEach(entry => {
+                    if (entry.response.status === 200 && entry.response.content.text) {
+                        try {
+                            const responseData = JSON.parse(entry.response.content.text);
+                            if (responseData.result && responseData.result.length > 0) {
+                                extractedData.push({
+                                    timestamp: entry.startedDateTime,
+                                    data: responseData.result[0]
+                                });
+                            }
+                        } catch (e) {
+                            console.log('Failed to parse response:', e);
+                        }
+                    }
+                });
+                
+                return extractedData;
+            } catch (e) {
+                console.error('Failed to parse HAR file:', e);
+                alert('Failed to parse HAR file. Please check the file format.');
+                return [];
+            }
+        }
+        
+        // Update visualization with sensor data
+        function updateVisualization(dataPoint) {
+            if (!dataPoint || !dataPoint.data) return;
+            
+            const data = dataPoint.data;
+            
+            // Update map
+            if (data.geolocation) {
+                const lat = data.geolocation.latitude;
+                const lon = data.geolocation.longitude;
+                
+                if (marker) {
+                    marker.setLatLng([lat, lon]);
+                } else {
+                    marker = L.marker([lat, lon]).addTo(map);
+                    map.setView([lat, lon], 15);
+                }
+                
+                // Update location stats
+                document.getElementById('latValue').textContent = lat.toFixed(6);
+                document.getElementById('lonValue').textContent = lon.toFixed(6);
+                document.getElementById('altValue').textContent = data.geolocation.altitude.toFixed(1);
+                document.getElementById('speedValue').textContent = data.geolocation.speed.toFixed(2);
+            }
+            
+            // Update observation data
+            if (data.observation) {
+                document.getElementById('rangeValue').textContent = data.observation.range.toFixed(1);
+                document.getElementById('velocityValue').textContent = data.observation.radialVelocity.toFixed(3);
+                
+                radarChart.data.datasets[0].data = [
+                    data.observation.range,
+                    Math.abs(data.observation.radialVelocity) * 100,
+                    Math.abs(data.observation.horizontalAngle),
+                    data.observation.azimuthAngle,
+                    Math.abs(data.observation.altitudeAngle) * 10
+                ];
+                radarChart.update();
+            }
+            
+            // Update signal statistics
+            if (data.stats) {
+                signalChart.data.datasets[0].data = [
+                    data.stats.amplitude / 100,
+                    data.stats.rcs * 10,
+                    data.stats.localSnr * 10,
+                    data.stats.energyMean / 1000
+                ];
+                signalChart.update();
+            }
+            
+            // Update classifications
+            if (data.stats && data.stats.classifications) {
+                const classList = document.getElementById('classificationList');
+                classList.innerHTML = '';
+                
+                const sortedClassifications = data.stats.classifications
+                    .filter(c => c.confidence > 0)
+                    .sort((a, b) => b.confidence - a.confidence);
+                
+                if (sortedClassifications.length === 0) {
+                    classList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No confident classifications</p>';
+                } else {
+                    sortedClassifications.forEach(classification => {
+                        const item = document.createElement('div');
+                        item.className = 'classification-item';
+                        item.innerHTML = `
+                            <span>${classification.type}</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span>${(classification.confidence * 100).toFixed(1)}%</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${classification.confidence * 100}%"></div>
+                                </div>
+                            </div>
+                        `;
+                        classList.appendChild(item);
+                    });
+                }
+            }
+        }
+        
+        // Update timeline
+        function updateTimeline() {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            
+            sensorData.forEach((dataPoint, index) => {
+                const time = new Date(dataPoint.timestamp);
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                if (index === currentDataIndex) {
+                    item.classList.add('active');
+                }
+                item.textContent = time.toLocaleTimeString();
+                item.onclick = () => {
+                    currentDataIndex = index;
+                    updateVisualization(sensorData[index]);
+                    updateTimeline();
+                };
+                timeline.appendChild(item);
+            });
+        }
+        
+        // Update time series chart
+        function updateTimeSeriesChart() {
+            const labels = sensorData.map(d => {
+                const time = new Date(d.timestamp);
+                return time.toLocaleTimeString();
+            });
+            
+            const rangeData = sensorData.map(d => d.data.observation ? d.data.observation.range : 0);
+            const speedData = sensorData.map(d => d.data.geolocation ? d.data.geolocation.speed : 0);
+            
+            timeSeriesChart.data.labels = labels;
+            timeSeriesChart.data.datasets[0].data = rangeData;
+            timeSeriesChart.data.datasets[1].data = speedData;
+            timeSeriesChart.update();
+        }
+        
+        // Load sample data
+        function loadSampleData() {
+            const sampleHAR = document.getElementById('fileInput').files[0];
+            if (sampleHAR) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    sensorData = parseHARFile(content);
+                    if (sensorData.length > 0) {
+                        currentDataIndex = 0;
+                        updateVisualization(sensorData[0]);
+                        updateTimeline();
+                        updateTimeSeriesChart();
+                        document.getElementById('playBtn').disabled = false;
+                        document.getElementById('resetBtn').disabled = false;
+                        
+                        // Clear info message
+                        const infoCard = document.querySelector('.info-message');
+                        if (infoCard) {
+                            infoCard.style.display = 'none';
+                        }
+                    }
+                };
+                reader.readAsText(sampleHAR);
+            } else {
+                alert('Please select a HAR file first');
+            }
+        }
+        
+        // Play animation
+        function playAnimation() {
+            const btn = document.getElementById('playBtn');
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+                btn.textContent = '▶️ Play Animation';
+            } else {
+                btn.textContent = '⏸️ Pause Animation';
+                animationInterval = setInterval(() => {
+                    currentDataIndex = (currentDataIndex + 1) % sensorData.length;
+                    updateVisualization(sensorData[currentDataIndex]);
+                    updateTimeline();
+                }, 1000);
+            }
+        }
+        
+        // Reset view
+        function resetView() {
+            currentDataIndex = 0;
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+                document.getElementById('playBtn').textContent = '▶️ Play Animation';
+            }
+            if (sensorData.length > 0) {
+                updateVisualization(sensorData[0]);
+                updateTimeline();
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('fileInput').addEventListener('change', loadSampleData);
+        document.getElementById('loadSampleBtn').addEventListener('click', loadSampleData);
+        document.getElementById('playBtn').addEventListener('click', playAnimation);
+        document.getElementById('resetBtn').addEventListener('click', resetView);
+        
+        // Initialize on page load
+        window.onload = function() {
+            initMap();
+            initCharts();
+        };
+    </script>
+</body>
+</html>
